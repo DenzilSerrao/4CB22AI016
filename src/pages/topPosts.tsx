@@ -1,52 +1,25 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Post } from "../types";
-import { fetchAllPostsFromAllUsers, fetchPostComments } from "../api";
+import { getCachedPosts } from "../api";
 
 export default function TopPosts() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // URL: /posts?type=popular or /posts?type=latest; default is popular.
+  // URL: /posts?type=popular or /posts?type=latest; default to "popular"
   const type = searchParams.get("type") === "latest" ? "latest" : "popular";
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        // STEP 1: Fetch all posts from all users.
-        let allPosts = await fetchAllPostsFromAllUsers();
-
-        // STEP 2: For each post, fetch its comments and compute the comment count.
-        const postsWithComments = await Promise.all(
-          allPosts.map(async (post: Post) => {
-            const comments = await fetchPostComments(post.id);
-            const commentCount = Array.isArray(comments) ? comments.length : 0;
-            return { ...post, commentCount };
-          })
-        );
-
-        let filteredPosts: Post[] = [];
-        if (type === "latest") {
-          // Sort descending by timestamp and take top 5.
-          const sortedByTime = postsWithComments.sort(
-            (a, b) =>
-              new Date(b.timestamp || "").getTime() - new Date(a.timestamp || "").getTime()
-          );
-          filteredPosts = sortedByTime.slice(0, 5);
-        } else {
-          // For "popular", filter posts that have the maximum comment count.
-          const maxComments = Math.max(
-            ...postsWithComments.map((post) => post.commentCount || 0)
-          );
-          filteredPosts = postsWithComments.filter(
-            (post) => (post.commentCount || 0) === maxComments
-          );
-        }
-        setPosts(filteredPosts);
+        // Use cached posts; if not cached, the API will fetch and cache the data.
+        const cachedData = await getCachedPosts(type);
+        setPosts(cachedData);
       } catch (error) {
-        console.error("Error fetching posts and comment counts:", error);
+        console.error("Error fetching cached posts:", error);
       } finally {
         setLoading(false);
       }
@@ -54,7 +27,6 @@ export default function TopPosts() {
     fetchData();
   }, [type]);
 
-  // Handler to update the URL query parameter.
   const handleTypeChange = (newType: "popular" | "latest") => {
     navigate(`/posts?type=${newType}`);
   };
