@@ -1,17 +1,19 @@
+|-- .env
 |-- .gitignore
 |-- eslint.config.js
 |-- index.html
+|-- package-lock.json
 |-- package.json
 |-- public
     |-- vite.svg
 |-- README.md
 |-- src
-    |-- App.css
     |-- App.tsx
     |-- assets
         |-- react.svg
     |-- index.css
     |-- main.tsx
+    |-- types.ts
     |-- vite-env.d.ts
 |-- tsconfig.app.json
 |-- tsconfig.json
