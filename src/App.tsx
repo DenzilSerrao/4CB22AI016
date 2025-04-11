@@ -1,76 +1,105 @@
 import { useState, useEffect } from 'react';
-import { User, Post, PostType } from './types';
-import { BarChart3 } from 'lucide-react';
-import { UserList } from './components/UserList';
-import { PostList } from './components/PostList';
 
-function App() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [postType, setPostType] = useState<PostType>('popular');
-  const [loading, setLoading] = useState(true);
+interface Post {
+  id: number;
+  userid: number;
+  content: string;
+  comments?: Comment[];
+}
 
-  // Using the VITE_ prefix from .env
+interface Comment {
+  id: number;
+  content: string;
+}
+
+export default function App() {
   const ACCESS_TOKEN = import.meta.env.VITE_ACCESS_TOKEN;
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const userId = 1; // change as needed
+
+  // Fetch posts for a given user
+  async function getUserPosts(userId: number): Promise<Post[]> {
+    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
+    const response = await fetch(`http://20.244.56.144/evaluation-service/users/${userId}/posts`, { headers });
+    console.log('Response:', response);
+    if (!response.ok) {
+      throw new Error(`Error fetching posts for user ${userId}: ${response.status}`);
+    }
+    const data = await response.json();
+    // Assuming API returns { posts: [...] } or just an array
+    return data.posts && Array.isArray(data.posts) ? data.posts : data;
+  }
+
+  // Fetch comments for a given post
+  async function getPostComments(postId: number): Promise<Comment[]> {
+    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
+    const response = await fetch(`http://20.244.56.144/evaluation-service/posts/${postId}/comments`, { headers });
+    console.log('Response:', response);
+    if (!response.ok) {
+      throw new Error(`Error fetching comments for post ${postId}: ${response.status}`);
+    }
+    const data = await response.json();
+    // Assuming API returns { comments: [...] } or just an array
+    return data.comments && Array.isArray(data.comments) ? data.comments : data;
+  }
+
+  // Combine posts with their corresponding comments
+  async function fetchUserPostsAndComments(userId: number) {
+    const posts = await getUserPosts(userId);
+    const postsWithComments = await Promise.all(
+      posts.map(async (post) => {
+        const comments = await getPostComments(post.id);
+        return { ...post, comments };
+      })
+    );
+    return postsWithComments;
+  }
 
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchData() {
       try {
         setLoading(true);
-
-        const headers = {
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
-        };
-
-        // Use valid API endpoints. Replace postsUrl with a valid hostname.
-        const usersUrl = 'http://20.244.56.144/evaluation-service/users';
-        const postsUrl = 'http://your-valid-posts-hostname/posts';
-
-        const [usersResponse, postsResponse] = await Promise.all([
-          fetch(usersUrl, { headers }),
-          fetch(`${postsUrl}?type=${postType}`, { headers }),
-        ]);
-
-        if (usersResponse.status === 401) {
-          console.error('Unauthorized access to users API');
-        }
-        if (!usersResponse.ok || !postsResponse.ok) {
-          throw new Error(
-            `Error fetching data: users(${usersResponse.status}), posts(${postsResponse.status})`
-          );
-        }
-
-        const usersData = await usersResponse.json();
-        const postsData = await postsResponse.json();
-
-        setUsers(usersData);
-        setPosts(postsData);
+        const posts = await fetchUserPostsAndComments(userId);
+        setUserPosts(posts);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching posts and comments:', error);
       } finally {
         setLoading(false);
       }
-    };
-
-    // Fetch data only once on component mount
+    }
     fetchData();
-  }, []); 
+  }, [userId, ACCESS_TOKEN]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-8 h-8 text-blue-600" />
-            Social Media Analytics
-          </h1>
-        </header>
-        {/* Render the rest of your UI */}
-        <PostList posts={posts} type={postType} loading={loading} />
-        <UserList users={users} loading={loading} />
-      </div>
+    <div className="container mx-auto p-4">
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold">Social Media Analytics</h1>
+      </header>
+
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <main>
+          <h2 className="text-xl font-semibold mb-4">
+            Posts and Comments for User {userId}
+          </h2>
+          {userPosts.map((post) => (
+            <div key={post.id} className="border p-4 mb-4 rounded">
+              <p className="font-medium">{post.content}</p>
+              {post.comments && post.comments.length > 0 ? (
+                <ul className="ml-4 mt-2 list-disc">
+                  {post.comments.map((comment) => (
+                    <li key={comment.id}>{comment.content}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ml-4 mt-2 text-gray-500">No comments available.</p>
+              )}
+            </div>
+          ))}
+        </main>
+      )}
     </div>
   );
 }
-
-export default App;
