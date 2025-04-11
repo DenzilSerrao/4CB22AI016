@@ -29,7 +29,7 @@ This is a **React + TypeScript** application built with **Vite**. It fetches and
 1. Clone the repository:
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/DenzilSerrao/4CB22AI016.git
    cd <repository-directory>
    ```
 

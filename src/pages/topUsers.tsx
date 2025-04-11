@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { User, Post, Comment } from "../types";
+import { Post } from "../types";
 import { getCachedTopUsers } from "../api";
 
-// Define TopUser interface (if not already in types)
+// Define TopUser interface
 export interface TopUser {
   id: number;
   name: string;
@@ -17,7 +17,7 @@ export default function TopUsers() {
     async function fetchData() {
       try {
         setLoading(true);
-        // Use the cached top users info (computed once and reused)
+        // Use the cached top users info (query once and reuse it)
         const cachedData = await getCachedTopUsers();
         setTopUsers(cachedData);
       } catch (error) {
