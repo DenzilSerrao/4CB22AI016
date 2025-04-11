@@ -65,7 +65,7 @@ export default function TopPosts() {
               <p className="mt-2 text-sm text-gray-600">
                 Comments: {post.commentCount || 0}
               </p>
-              {post.timestamp && (
+              {type === "latest" && post.timestamp && (
                 <p className="text-xs text-gray-500">
                   Posted on: {new Date(post.timestamp).toLocaleString()}
                 </p>

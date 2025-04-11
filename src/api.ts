@@ -74,3 +74,49 @@ export async function getCachedPosts(tag: "latest" | "popular"): Promise<Post[]>
   }
   return cachedPosts[tag]!;
 }
+
+// Global cache for top users.
+let cachedTopUsers: { id: number; name: string; topPost: Post & { commentCount: number } }[] | undefined;
+
+export async function getCachedTopUsers(): Promise<{ id: number; name: string; topPost: Post & { commentCount: number } }[]> {
+  if (cachedTopUsers) {
+    return cachedTopUsers;
+  }
+  // Fetch all users.
+  const users: User[] = await fetchAllUsers();
+  // For each user, fetch their posts and compute comment counts.
+  const topUsersData = await Promise.all(
+    users.map(async (user) => {
+      const posts: Post[] = await fetchUserPosts(user.id);
+      if (!posts || posts.length === 0) return null;
+      const postsWithComments = await Promise.all(
+        posts.map(async (post) => {
+          const comments: Comment[] = await fetchPostComments(post.id);
+          const commentCount = Array.isArray(comments) ? comments.length : 0;
+          // Force commentCount as number.
+          return { ...post, commentCount: commentCount };
+        })
+      );
+      if (!postsWithComments || postsWithComments.length === 0) return null;
+      const topPost = postsWithComments.reduce((prev, curr) =>
+        (curr.commentCount || 0) > (prev.commentCount || 0) ? curr : prev
+      );
+      if (!topPost) return null;
+      return {
+        id: user.id,
+        name: user.name,
+        topPost,
+      };
+    })
+  );
+  // Use a type predicate that ensures topPost has commentCount as number.
+  const validTopUsers = topUsersData.filter(
+    (u): u is { id: number; name: string; topPost: Post & { commentCount: number } } =>
+      u !== null && u.topPost.commentCount !== undefined
+  );
+  validTopUsers.sort(
+    (a, b) => (b.topPost.commentCount || 0) - (a.topPost.commentCount || 0)
+  );
+  cachedTopUsers = validTopUsers.slice(0, 5);
+  return cachedTopUsers;
+}
