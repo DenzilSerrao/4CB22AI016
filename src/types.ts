@@ -1,15 +1,17 @@
-export interface User {
-  id: string;
-  name: string;
-  commentCount: number;
+export interface Comment {
+  id: number;
+  content: string;
 }
 
 export interface Post {
-  id: string;
-  userId: string;
+  id: number;
+  userid: number;
   content: string;
-  timestamp: string;
-  commentCount: number;
+  comments?: Comment[];
 }
 
-export type PostType = 'latest' | 'popular';
+export interface User {
+  id: number;
+  name: string;
+  commentCount: number;
+}

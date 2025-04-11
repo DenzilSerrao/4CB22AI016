@@ -19,6 +19,10 @@
     |-- index.css
     |-- main.tsx
     |-- models
+    |-- pages
+        |-- home.tsx
+        |-- topPosts.tsx
+        |-- topUsers.tsx
     |-- routes
     |-- types.ts
     |-- vite-env.d.ts
