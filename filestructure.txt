@@ -9,21 +9,12 @@
 |-- README.md
 |-- src
     |-- App.tsx
-    |-- assets
-        |-- react.svg
-    |-- components
-        |-- PostList.tsx
-        |-- UserList.tsx
-    |-- config
-    |-- controllers
     |-- index.css
     |-- main.tsx
-    |-- models
     |-- pages
-        |-- home.tsx
-        |-- topPosts.tsx
-        |-- topUsers.tsx
-    |-- routes
+        |-- Home.tsx
+        |-- TopPosts.tsx
+        |-- TopUsers.tsx
     |-- types.ts
     |-- vite-env.d.ts
 |-- tsconfig.app.json

@@ -6,7 +6,10 @@ export interface Comment {
 export interface Post {
   id: number;
   userid: number;
+  title?: string;
   content: string;
+  commentCount?: number;
+  timestamp?: string;
   comments?: Comment[];
 }
 
