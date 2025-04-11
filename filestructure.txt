@@ -8,6 +8,7 @@
     |-- vite.svg
 |-- README.md
 |-- src
+    |-- api.ts
     |-- App.tsx
     |-- index.css
     |-- main.tsx

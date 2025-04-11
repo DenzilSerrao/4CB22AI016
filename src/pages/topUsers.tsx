@@ -1,92 +1,78 @@
 import { useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, Post, Comment } from '../types';
+import { fetchAllUsers, fetchUserPosts, fetchPostComments } from '../api';
+
+interface TopUser {
+  id: number;
+  name: string;
+  topPostId: number;
+  topComments: number;
+}
 
 export default function TopUsers() {
-  const ACCESS_TOKEN = import.meta.env.VITE_ACCESS_TOKEN;
-  const [topUsers, setTopUsers] = useState<User[]>([]);
+  const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
-  async function getUserPosts(userId: number): Promise<any[]> {
-    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-    const response = await fetch(`http://20.244.56.144/evaluation-service/users/${userId}/posts`, { headers });
-    if (!response.ok) {
-      throw new Error(`Error fetching posts for user ${userId}: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.posts && Array.isArray(data.posts) ? data.posts : data;
-  }
-
-  async function getPostComments(postId: number): Promise<any[]> {
-    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-    const response = await fetch(`http://20.244.56.144/evaluation-service/posts/${postId}/comments`, { headers });
-    if (!response.ok) {
-      throw new Error(`Error fetching comments for post ${postId}: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.comments && Array.isArray(data.comments) ? data.comments : data;
-  }
-
-  async function fetchAllUsersWithComments(): Promise<User[]> {
-    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-    const usersResponse = await fetch(`http://20.244.56.144/evaluation-service/users`, { headers });
-    if (!usersResponse.ok) {
-      throw new Error(`Error fetching users: ${usersResponse.status}`);
-    }
-    const usersData = await usersResponse.json();
-
-    const usersArray: User[] = usersData.users
-      ? Object.entries(usersData.users).map(([id, name]) => ({
-          id: Number(id),
-          name: String(name),
-          commentCount: 0,
-        }))
-      : [];
-
-    const usersWithComments = await Promise.all(
-      usersArray.map(async (user) => {
-        try {
-          const posts = await getUserPosts(user.id);
-          let totalComments = 0;
-          for (const post of posts) {
-            const comments = await getPostComments(post.id);
-            totalComments += Array.isArray(comments) ? comments.length : 0;
-          }
-          return { ...user, commentCount: totalComments };
-        } catch (error) {
-          console.error(`Error processing user ${user.id}`, error);
-          return { ...user, commentCount: 0 };
-        }
-      })
-    );
-    return usersWithComments;
-  }
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        const usersWithComments = await fetchAllUsersWithComments();
-        const sorted = usersWithComments.sort((a, b) => b.commentCount - a.commentCount);
-        setTopUsers(sorted.slice(0, 5));
+        // STEP 1: Fetch all users.
+        const users: User[] = await fetchAllUsers();
+
+        // STEP 2: For each user, fetch their posts and determine their most commented post.
+        const topUsersData: (TopUser | null)[] = await Promise.all(
+          users.map(async (user) => {
+            const posts: Post[] = await fetchUserPosts(user.id);
+            if (!posts || posts.length === 0) return null;
+            // For every post, fetch its comments and attach comment count.
+            const postsWithComments = await Promise.all(
+              posts.map(async (post) => {
+                const comments: Comment[] = await fetchPostComments(post.id);
+                const count = Array.isArray(comments) ? comments.length : 0;
+                return { ...post, commentCount: count };
+              })
+            );
+            // Find the post with the maximum comment count.
+            const topPost = postsWithComments.reduce((prev, curr) =>
+              (curr.commentCount || 0) > (prev.commentCount || 0) ? curr : prev
+            );
+            return {
+              id: user.id,
+              name: user.name,
+              topPostId: topPost.id,
+              topComments: topPost.commentCount || 0,
+            };
+          })
+        );
+
+        // Filter out users with no posts.
+        const validTopUsers = topUsersData.filter((u): u is TopUser => u !== null);
+        // Sort users descending by the top post's comment count.
+        validTopUsers.sort((a, b) => b.topComments - a.topComments);
+        // Take only the top 5 users.
+        setTopUsers(validTopUsers.slice(0, 5));
       } catch (error) {
-        console.error('Error fetching users with comments:', error);
+        console.error("Error fetching top users:", error);
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, [ACCESS_TOKEN]);
+  }, []);
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Top 5 Users by Comment Count</h1>
+      <h1 className="text-2xl font-bold mb-4">Top 5 Users by Most Commented Post</h1>
       {loading ? (
         <p>Loading...</p>
       ) : (
-        topUsers.map((user) => (
+        topUsers.map(user => (
           <div key={user.id} className="border p-4 mb-4 rounded">
             <p className="font-medium">User: {user.name}</p>
-            <p className="mt-2 text-sm text-gray-600">Comments: {user.commentCount}</p>
+            <p className="mt-2 text-sm text-gray-600">
+              Post ID with most comments: {user.topPostId} (Comments: {user.topComments})
+            </p>
           </div>
         ))
       )}

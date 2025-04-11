@@ -1,70 +1,50 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Post } from "../types";
+import { fetchAllPostsFromAllUsers, fetchPostComments } from "../api";
 
 export default function TopPosts() {
-  const ACCESS_TOKEN = import.meta.env.VITE_ACCESS_TOKEN;
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // The address bar shows /posts?type=popular or /posts?type=latest.
+  // URL: /posts?type=popular or /posts?type=latest; default is popular.
   const type = searchParams.get("type") === "latest" ? "latest" : "popular";
-
-  // Fetch all posts (assumes an endpoint returning all posts)
-  async function fetchAllPosts(): Promise<Post[]> {
-    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-    const response = await fetch("http://20.244.56.144/evaluation-service/posts", { headers });
-    if (!response.ok) {
-      throw new Error(`Error fetching posts: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.posts && Array.isArray(data.posts) ? data.posts : data;
-  }
-
-  // Fetch the comment count for a given post
-  async function fetchCommentsCount(postId: number): Promise<number> {
-    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-    const response = await fetch(
-      `http://20.244.56.144/evaluation-service/posts/${postId}/comments`,
-      { headers }
-    );
-    if (!response.ok) {
-      throw new Error(`Error fetching comments for post ${postId}: ${response.status}`);
-    }
-    const data = await response.json();
-    const comments = data.comments && Array.isArray(data.comments) ? data.comments : data;
-    return comments.length;
-  }
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
+        // STEP 1: Fetch all posts from all users.
+        let allPosts = await fetchAllPostsFromAllUsers();
 
-        // Fetch all posts
-        let postsData = await fetchAllPosts();
-
-        // For each post, fetch its comment count
-        postsData = await Promise.all(
-          postsData.map(async (post: Post) => {
-            const commentCount = await fetchCommentsCount(post.id);
+        // STEP 2: For each post, fetch its comments and compute the comment count.
+        const postsWithComments = await Promise.all(
+          allPosts.map(async (post: Post) => {
+            const comments = await fetchPostComments(post.id);
+            const commentCount = Array.isArray(comments) ? comments.length : 0;
             return { ...post, commentCount };
           })
         );
 
-        // Sort posts based on the navigated page type:
-        // "latest": sort descending by timestamp (assumes post.timestamp exists and is ISO formatted)
-        // "popular": sort descending by comment count
+        let filteredPosts: Post[] = [];
         if (type === "latest") {
-          postsData.sort(
+          // Sort descending by timestamp and take top 5.
+          const sortedByTime = postsWithComments.sort(
             (a, b) =>
               new Date(b.timestamp || "").getTime() - new Date(a.timestamp || "").getTime()
           );
+          filteredPosts = sortedByTime.slice(0, 5);
         } else {
-          postsData.sort((a, b) => (b.commentCount || 0) - (a.commentCount || 0));
+          // For "popular", filter posts that have the maximum comment count.
+          const maxComments = Math.max(
+            ...postsWithComments.map((post) => post.commentCount || 0)
+          );
+          filteredPosts = postsWithComments.filter(
+            (post) => (post.commentCount || 0) === maxComments
+          );
         }
-        setPosts(postsData);
+        setPosts(filteredPosts);
       } catch (error) {
         console.error("Error fetching posts and comment counts:", error);
       } finally {
@@ -72,9 +52,9 @@ export default function TopPosts() {
       }
     }
     fetchData();
-  }, [type, ACCESS_TOKEN]);
+  }, [type]);
 
-  // Handler to toggle the query parameter
+  // Handler to update the URL query parameter.
   const handleTypeChange = (newType: "popular" | "latest") => {
     navigate(`/posts?type=${newType}`);
   };
