@@ -1,6 +1,3 @@
----
-
-```markdown
 # Social Media Analytics
 
 This is a **React + TypeScript** application built with **Vite**. It fetches and analyzes social media data via APIs, displaying **Top Posts**, **Latest Posts**, and **Top Users** with smart caching to reduce redundant API calls.
