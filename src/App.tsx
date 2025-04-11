@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { User, Post, PostType } from './types';
-import { Users } from 'lucide-react'
-import { BarChart3, MessageSquare } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
+import { UserList } from './components/UserList';
+import { PostList } from './components/PostList';
 
 function App() {
   const [users, setUsers] = useState<User[]>([]);
@@ -9,8 +10,8 @@ function App() {
   const [postType, setPostType] = useState<PostType>('popular');
   const [loading, setLoading] = useState(true);
 
+  // Using the VITE_ prefix from .env
   const ACCESS_TOKEN = import.meta.env.VITE_ACCESS_TOKEN;
-  console.log('Access Token:', ACCESS_TOKEN);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -20,11 +21,24 @@ function App() {
         const headers = {
           Authorization: `Bearer ${ACCESS_TOKEN}`,
         };
-        
+
+        // Use valid API endpoints. Replace postsUrl with a valid hostname.
+        const usersUrl = 'http://20.244.56.144/evaluation-service/users';
+        const postsUrl = 'http://your-valid-posts-hostname/posts';
+
         const [usersResponse, postsResponse] = await Promise.all([
-          fetch('http://20.244.56.144/evaluation-service/users', { headers }),
-          fetch(`http://hostname/posts?type=${postType}`, { headers }),
+          fetch(usersUrl, { headers }),
+          fetch(`${postsUrl}?type=${postType}`, { headers }),
         ]);
+
+        if (usersResponse.status === 401) {
+          console.error('Unauthorized access to users API');
+        }
+        if (!usersResponse.ok || !postsResponse.ok) {
+          throw new Error(
+            `Error fetching data: users(${usersResponse.status}), posts(${postsResponse.status})`
+          );
+        }
 
         const usersData = await usersResponse.json();
         const postsData = await postsResponse.json();
@@ -38,11 +52,9 @@ function App() {
       }
     };
 
+    // Fetch data only once on component mount
     fetchData();
-    const interval = setInterval(fetchData, 3000000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [postType]);
+  }, []); 
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,52 +65,9 @@ function App() {
             Social Media Analytics
           </h1>
         </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-blue-600" />
-                  Posts
-                </h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPostType('popular')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      postType === 'popular'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Popular
-                  </button>
-                  <button
-                    onClick={() => setPostType('latest')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      postType === 'latest'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Latest
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <div>
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                Top Users
-              </h2>
-
-            </div>
-          </div>
-        </div>
+        {/* Render the rest of your UI */}
+        <PostList posts={posts} type={postType} loading={loading} />
+        <UserList users={users} loading={loading} />
       </div>
     </div>
   );
