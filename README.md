@@ -1,54 +1,123 @@
-# React + TypeScript + Vite
+---
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+```markdown
+# Social Media Analytics
 
-Currently, two official plugins are available:
+This is a **React + TypeScript** application built with **Vite**. It fetches and analyzes social media data via APIs, displaying **Top Posts**, **Latest Posts**, and **Top Users** with smart caching to reduce redundant API calls.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Built with **React + Vite + TypeScript**
+- Efficient **API caching** to reduce load
+- Displays:
+  - **Top Users** by comment engagement
+  - **Popular Posts** (by comment count)
+  - **Latest Posts** (by timestamp)
+- In-memory caching to minimize API hits
+- Clear cache at app load to ensure fresh data
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+---
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) v14 or later
+- npm (comes with Node.js) or [Yarn](https://yarnpkg.com/)
+
+---
+
+## Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
+
+2. Install dependencies:
+
+   Using npm:
+
+   ```bash
+   npm install
+   ```
+
+   Or using Yarn:
+
+   ```bash
+   yarn
+   ```
+
+---
+
+## Running the App
+
+Start the development server with hot module replacement:
+
+Using npm:
+
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Or using Yarn:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+yarn dev
 ```
+
+Then open your browser at:  
+[http://localhost:5173](http://localhost:5173)
+
+---
+
+## Application Overview
+
+### Home Page
+
+- Prefetches and caches all required data on load
+- Displays navigation links to explore:
+  - Top Users
+  - Latest Posts
+  - Popular Posts
+
+### Top Users
+
+- Shows top 5 users based on their most commented post
+
+### Top Posts
+
+- View Latest Posts (by timestamp)
+- View Popular Posts (with most comments)
+
+---
+
+## Cache Management
+
+- All API data is cached in memory after the first fetch
+- Cache is cleared on app start using `clearCachedData()` to avoid stale data during development
+
+---
+
+---
+
+## Troubleshooting
+
+- Ensure a valid **Access Token** is defined in `.env`:
+
+  ```
+  VITE_ACCESS_TOKEN=your-token-here
+  ```
+
+- Confirm that the API server is live and responds correctly
+- Check the browser console for detailed error messages during development
+
+---
+
+## License
+
+This project is licensed under the **MIT License**.
+
+---
