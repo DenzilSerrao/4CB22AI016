@@ -42,16 +42,26 @@ export async function fetchAllPostsFromAllUsers(): Promise<Post[]> {
   return postsArrays.flat();
 }
 
-// Global cache for posts keyed by tag.
+// --- Global Cache Variables ---
+let cachedAllPostsWithComments: (Post & { commentCount: number })[] | undefined;
 const cachedPosts: { latest?: Post[]; popular?: Post[] } = {};
+let cachedTopUsers:
+  | { id: number; name: string; topPost: Post & { commentCount: number } }[]
+  | undefined;
 
-// Returns posts for the given tag: "latest" means top 5 recent posts,
-// "popular" means those posts having the maximum comment count.
-export async function getCachedPosts(tag: "latest" | "popular"): Promise<Post[]> {
-  if (cachedPosts[tag]) {
-    return cachedPosts[tag]!;
-  }
-  // Fetch all posts and attach comment count to each.
+// --- Clear Cache Function ---
+// This function should be called at the start of your application to ensure no stale data.
+export function clearCachedData(): void {
+  cachedAllPostsWithComments = undefined;
+  cachedPosts.latest = undefined;
+  cachedPosts.popular = undefined;
+  cachedTopUsers = undefined;
+}
+
+// --- Helper: Compute all posts with their comment counts once ---
+// This minimizes API calls by fetching all posts and then their comment counts only once.
+export async function getCachedAllPostsWithComments(): Promise<(Post & { commentCount: number })[]> {
+  if (cachedAllPostsWithComments) return cachedAllPostsWithComments;
   const allPosts = await fetchAllPostsFromAllUsers();
   const postsWithComments = await Promise.all(
     allPosts.map(async (post: Post) => {
@@ -60,6 +70,21 @@ export async function getCachedPosts(tag: "latest" | "popular"): Promise<Post[]>
       return { ...post, commentCount };
     })
   );
+  cachedAllPostsWithComments = postsWithComments;
+  return postsWithComments;
+}
+
+// --- Cached Posts ---
+// Returns posts for the given tag:
+// "latest": sorts posts by timestamp (newest first) and takes the top 5.
+// "popular": returns posts with the maximum comment count.
+// Since both "popular" posts and TopUsers rely on posts with comment counts,
+// this function avoids duplicate API calls.
+export async function getCachedPosts(tag: "latest" | "popular"): Promise<Post[]> {
+  if (cachedPosts[tag]) {
+    return cachedPosts[tag]!;
+  }
+  const postsWithComments = await getCachedAllPostsWithComments();
   if (tag === "latest") {
     const sortedByTime = postsWithComments.sort(
       (a, b) =>
@@ -67,56 +92,40 @@ export async function getCachedPosts(tag: "latest" | "popular"): Promise<Post[]>
     );
     cachedPosts.latest = sortedByTime.slice(0, 5);
   } else {
-    const maxComments = Math.max(...postsWithComments.map(post => post.commentCount || 0));
-    cachedPosts.popular = postsWithComments.filter(
-      post => (post.commentCount || 0) === maxComments
-    );
+    const maxComments = Math.max(...postsWithComments.map(post => post.commentCount));
+    cachedPosts.popular = postsWithComments.filter(post => post.commentCount === maxComments);
   }
   return cachedPosts[tag]!;
 }
 
-// Global cache for top users.
-let cachedTopUsers: { id: number; name: string; topPost: Post & { commentCount: number } }[] | undefined;
-
+// --- Cached Top Users ---
+// Returns the top 5 users by determining, for each user, the post with the maximum comment count.
+// This function reuses getCachedAllPostsWithComments() to avoid extra API hits.
 export async function getCachedTopUsers(): Promise<{ id: number; name: string; topPost: Post & { commentCount: number } }[]> {
   if (cachedTopUsers) {
     return cachedTopUsers;
   }
-  // Fetch all users.
-  const users: User[] = await fetchAllUsers();
-  // For each user, fetch their posts and compute comment counts.
-  const topUsersData = await Promise.all(
-    users.map(async (user) => {
-      const posts: Post[] = await fetchUserPosts(user.id);
-      if (!posts || posts.length === 0) return null;
-      const postsWithComments = await Promise.all(
-        posts.map(async (post) => {
-          const comments: Comment[] = await fetchPostComments(post.id);
-          const commentCount = Array.isArray(comments) ? comments.length : 0;
-          // Force commentCount as number.
-          return { ...post, commentCount: commentCount };
-        })
-      );
-      if (!postsWithComments || postsWithComments.length === 0) return null;
-      const topPost = postsWithComments.reduce((prev, curr) =>
-        (curr.commentCount || 0) > (prev.commentCount || 0) ? curr : prev
-      );
-      if (!topPost) return null;
-      return {
-        id: user.id,
-        name: user.name,
-        topPost,
-      };
-    })
-  );
-  // Use a type predicate that ensures topPost has commentCount as number.
-  const validTopUsers = topUsersData.filter(
-    (u): u is { id: number; name: string; topPost: Post & { commentCount: number } } =>
-      u !== null && u.topPost.commentCount !== undefined
-  );
-  validTopUsers.sort(
-    (a, b) => (b.topPost.commentCount || 0) - (a.topPost.commentCount || 0)
-  );
-  cachedTopUsers = validTopUsers.slice(0, 5);
+  const postsWithComments = await getCachedAllPostsWithComments();
+  // Group posts by user id.
+  const userPostsMap: { [userId: number]: (Post & { commentCount: number })[] } = {};
+  postsWithComments.forEach((post) => {
+    if (!userPostsMap[post.userid]) {
+      userPostsMap[post.userid] = [];
+    }
+    userPostsMap[post.userid].push(post as Post & { commentCount: number });
+  });
+  // Fetch all users information.
+  const users = await fetchAllUsers();
+  const topUsers: { id: number; name: string; topPost: Post & { commentCount: number } }[] = [];
+  users.forEach((user) => {
+    const posts = userPostsMap[user.id];
+    if (posts && posts.length > 0) {
+      const topPost = posts.reduce((prev, curr) => (curr.commentCount > prev.commentCount ? curr : prev));
+      topUsers.push({ id: user.id, name: user.name, topPost });
+    }
+  });
+  // Sort users descending by their top post's comment count and take top 5.
+  topUsers.sort((a, b) => b.topPost.commentCount - a.topPost.commentCount);
+  cachedTopUsers = topUsers.slice(0, 5);
   return cachedTopUsers;
 }
