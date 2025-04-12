@@ -7,6 +7,8 @@
 |-- public
     |-- vite.svg
 |-- README.md
+|-- Screenshots
+    |-- Screenshot 2025-04-12 082602.png
 |-- src
     |-- api.ts
     |-- App.tsx
