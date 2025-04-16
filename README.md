@@ -51,7 +51,7 @@ This is a **React + TypeScript** application built with **Vite**. It fetches and
 
 ## Running the App
 
-Start the development server with hot module replacement:
+Start the development server with the command:
 
 Using npm:
 
@@ -110,11 +110,5 @@ Then open your browser at:
 
 - Confirm that the API server is live and responds correctly
 - Check the browser console for detailed error messages during development
-
----
-
-## License
-
-This project is licensed under the **MIT License**.
 
 ---
