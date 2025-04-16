@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import TopUsers from './pages/TopUsers';
-import Posts from './pages/TopPosts';
+import Home from './pages/home';
+import TopUsers from './pages/topUsers';
+import Posts from './pages/topPosts';
 
 export default function App() {
   return (
