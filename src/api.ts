@@ -2,7 +2,8 @@ import { Post, User, Comment } from "./types";
 
 const ACCESS_TOKEN = import.meta.env.VITE_ACCESS_TOKEN;
 const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-
+// console.log(`Access Token: ${ACCESS_TOKEN}`);
+// console.log(`Headers: ${JSON.stringify(headers)}`);
 // Fetch all users
 export async function fetchAllUsers(): Promise<User[]> {
   const response = await fetch("http://20.244.56.144/evaluation-service/users", { headers });
