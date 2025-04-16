@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCachedPosts } from "../api";
+import { getCachedPosts, getCachedTopUsers } from "../api";
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -10,7 +10,7 @@ export default function Home() {
       try {
         // Reuse cached data if it exists.
         // getCachedPosts internally checks for existing cached data.
-        await Promise.all([getCachedPosts("latest"), getCachedPosts("popular")]);
+        await Promise.all([getCachedPosts("latest"), getCachedPosts("popular"),getCachedTopUsers()]);
         console.log("Cache loaded successfully");
       } catch (error) {
         console.error("Error preloading cache:", error);
