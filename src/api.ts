@@ -22,7 +22,7 @@ export async function fetchUserPosts(userId: number): Promise<Post[]> {
   const response = await fetch(`http://20.244.56.144/evaluation-service/users/${userId}/posts`, { headers });
   if (!response.ok) throw new Error(`Error fetching posts for user ${userId}: ${response.status}`);
   const data = await response.json();
-  return data.posts && Array.isArray(data.posts) ? data.posts : data;
+  return data.posts && Array.isArray(data.posts) ? data.posts : [];
 }
 
 // Fetch all comments on a post
@@ -30,7 +30,7 @@ export async function fetchPostComments(postId: number): Promise<Comment[]> {
   const response = await fetch(`http://20.244.56.144/evaluation-service/posts/${postId}/comments`, { headers });
   if (!response.ok) throw new Error(`Error fetching comments for post ${postId}: ${response.status}`);
   const data = await response.json();
-  return data.comments && Array.isArray(data.comments) ? data.comments : data;
+  return data.comments && Array.isArray(data.comments) ? data.comments : [];
 }
 
 // Fetch all posts from all users
